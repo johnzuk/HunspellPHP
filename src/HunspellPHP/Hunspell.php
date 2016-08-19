@@ -36,7 +36,7 @@ class Hunspell
      * @var string
      */
     protected $matcher =
-        "/(?P<type>\*|\+|&|#)\s?(?P<original>\w+)?(\s(?P<count>\d+)\s(?P<offset>\d+):\s(?P<misses>.*+))?/u";
+        "/(?P<type>\*|\+|&|#)\s?(?P<original>\w+)?\s?(?P<count>\d+)?\s?(?P<offset>\d+)?:?\s?(?P<misses>.*+)?/u";
 
     /**
      * @return string
@@ -71,25 +71,25 @@ class Hunspell
     }
 
     /**
-     * @param string $word word to find
-     * @return HunspellResponse
+     * @param $words
+     * @return array
      * @throws InvalidMatchTypeException
-     * @throws InvalidResultException
-     * @throws WordNotFoundException
      */
-    public function find($word)
+    public function find($words)
     {
         $matches = [];
-        $result = $this->preParse($this->command($word));
+        $results = $this->preParse($this->command($words), $words);
 
-        $match = preg_match($this->matcher, $result, $matches);
+        $response = [];
+        foreach ($results as $word => $result) {
+            $matches = [];
+            $match = preg_match($this->matcher, $result, $matches);
 
-        if (!$match) {
-            throw new InvalidResultException(sprintf("Invalid hunspell result."));
+            $matches['input'] = $word;
+            $response[] = $this->parse($matches);
         }
-        $matches['input'] = $word;
 
-        return $this->parse($matches);
+        return $response;
     }
 
     /**
@@ -112,20 +112,22 @@ class Hunspell
 
     /**
      * @param string $input
-     * @return string
+     * @param string $words
+     * @return array
      */
-    protected function preParse($input)
+    protected function preParse($input, $words)
     {
-        $result = explode(PHP_EOL, $input);
+        $result = explode(PHP_EOL, trim($input));
+        unset($result[0]);
+        $words = array_map('trim', explode(" ", $words));
 
-        return isset($result[1]) ? $result[1] : $result[0];
+        return array_combine($words, $result);
     }
 
     /**
      * @param array $matches
      * @return HunspellResponse
      * @throws InvalidMatchTypeException
-     * @throws WordNotFoundException
      */
     protected function parse(array $matches)
     {
@@ -150,7 +152,12 @@ class Hunspell
                 explode(", ", $matches['misses'])
             );
         } else if ($matches['type'] == Hunspell::NONE) {
-            throw new WordNotFoundException(sprintf("Word %s not found", $matches['input']));
+            return new HunspellResponse(
+                '',
+                $matches['input'],
+                Hunspell::STATUSES_NAME[$matches['type']],
+                $matches['count']
+            );
         }
 
         throw new InvalidMatchTypeException(sprintf("Match type %s is invalid", $matches['type']));
