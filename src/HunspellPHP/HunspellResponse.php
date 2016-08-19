@@ -26,7 +26,7 @@ class HunspellResponse
     /**
      * @var string
      */
-    public $code;
+    public $type;
 
     /**
      * HunspellResponse constructor.
@@ -34,14 +34,14 @@ class HunspellResponse
      * @param string $original
      * @param int $offset
      * @param array $misses
-     * @param string $code
+     * @param string $type
      */
-    public function __construct($root, $original, $code = '', $offset = null, array $misses = [])
+    public function __construct($root, $original, $type = '', $offset = null, array $misses = [])
     {
         $this->root = $root;
         $this->original = $original;
         $this->offset = $offset;
         $this->misses = $misses;
-        $this->code = $code;
+        $this->type = $type;
     }
 }

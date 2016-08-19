@@ -135,19 +135,19 @@ class Hunspell
             return new HunspellResponse(
                 $matches['input'],
                 $matches['input'],
-                Hunspell::STATUSES_NAME[$matches['type']]
+                $matches['type']
             );
         } else if ($matches['type'] == Hunspell::ROOT) {
             return new HunspellResponse(
                 $matches['original'],
                 $matches['input'],
-                Hunspell::STATUSES_NAME[$matches['type']]
+                $matches['type']
             );
         } else if ($matches['type'] == Hunspell::MISS) {
             return new HunspellResponse(
                 '',
                 $matches['original'],
-                Hunspell::STATUSES_NAME[$matches['type']],
+                $matches['type'],
                 $matches['offset'],
                 explode(", ", $matches['misses'])
             );
@@ -155,7 +155,7 @@ class Hunspell
             return new HunspellResponse(
                 '',
                 $matches['input'],
-                Hunspell::STATUSES_NAME[$matches['type']],
+                $matches['type'],
                 $matches['count']
             );
         }
