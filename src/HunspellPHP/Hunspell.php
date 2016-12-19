@@ -81,7 +81,7 @@ class Hunspell
     public function find($words)
     {
         $matches = [];
-        $results = $this->preParse($this->command($words), $words);
+        $results = $this->preParse($this->findCommand($words), $words);
 
         $response = [];
         foreach ($results as $word => $result) {
@@ -93,6 +93,21 @@ class Hunspell
         }
 
         return $response;
+    }
+
+    /**
+     * @param string $word word to find
+     * @return HunspellStemResponse
+     * @throws InvalidMatchTypeException
+     * @throws InvalidResultException
+     * @throws WordNotFoundException
+     */
+    public function stem($word)
+    {
+        $result = explode(PHP_EOL, $this->stemCommand($word));
+        $result['input'] = $word;
+        $result = $this->stemParse($result);
+        return $result;
     }
 
     /**
@@ -108,9 +123,18 @@ class Hunspell
      * @return string
      * @param string $input
      */
-    protected function command($input)
+    protected function findCommand($input)
     {
         return shell_exec(sprintf("LANG=%s; echo '%s' | hunspell -d %s", $this->encoding, $input, $this->language));
+    }
+
+    /**
+     * @return string
+     * @param string $input
+     */
+    protected function stemCommand($input)
+    {
+        return shell_exec(sprintf("LANG=%s; echo '%s' | hunspell -d %s -s", $this->encoding, $input, $this->language));
     }
 
     /**
@@ -164,6 +188,32 @@ class Hunspell
         }
 
         throw new InvalidMatchTypeException(sprintf("Match type %s is invalid", $matches['type']));
+    }
+
+    /**
+     * @param array $matches
+     * @return HunspellStemResponse
+     * @throws InvalidMatchTypeException
+     * @throws WordNotFoundException
+     */
+    protected function stemParse(array $matches)
+    {
+        $input = $matches['input'];
+        unset($matches['input']);
+        $stems = [];
+        foreach ($matches as $match) {
+            $stem = explode(' ', $match);
+            if (isset($stem[1]) && !empty($stem[1])) {
+                if (!in_array($stem[1], $stems)) {
+                    $stems[] = $stem[1];
+                }
+            } elseif (isset($stem[0]) && !empty($stem[0])) {
+                if (!in_array($stem[0], $stems)) {
+                    $stems[] = $stem[0];
+                }
+            }
+        }
+        return new HunspellStemResponse($input, $stems);
     }
 
 }
