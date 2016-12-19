@@ -15,11 +15,14 @@ class Hunspell
 
     const NONE = '#';
 
+    const COMPOUND = '-';
+
     const STATUSES_NAME = [
         Hunspell::OK => 'OK',
         Hunspell::ROOT => 'ROOT',
         Hunspell::MISS => 'MISS',
         Hunspell::NONE => 'NONE',
+        Hunspell::COMPOUND => 'COMPOUND',
     ];
 
     /**
@@ -131,7 +134,7 @@ class Hunspell
      */
     protected function parse(array $matches)
     {
-        if ($matches['type'] == Hunspell::OK) {
+        if ($matches['type'] == Hunspell::OK || $matches['type'] == Hunspell::COMPOUND) {
             return new HunspellResponse(
                 $matches['input'],
                 $matches['input'],
