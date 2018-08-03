@@ -125,7 +125,13 @@ class Hunspell
      */
     protected function findCommand($input)
     {
-        return shell_exec(sprintf("LANG=%s; echo '%s' | hunspell -d %s", $this->encoding, $input, $this->language));
+
+		if (strtoupper(substr(PHP_OS, 0, 3)) === 'WIN') {
+			return shell_exec(sprintf("powershell \"set LANG='%s'; echo '%s' | hunspell -d %s\"", $this->encoding, $input, $this->language));
+		} else {
+			return shell_exec(sprintf("export LANG='%s'; echo '%s' | hunspell -d %s", $this->encoding, $input, $this->language));
+		}
+
     }
 
     /**
@@ -134,7 +140,13 @@ class Hunspell
      */
     protected function stemCommand($input)
     {
-        return shell_exec(sprintf("LANG=%s; echo '%s' | hunspell -d %s -s", $this->encoding, $input, $this->language));
+
+		if (strtoupper(substr(PHP_OS, 0, 3)) === 'WIN') {
+			return shell_exec(sprintf("powershell \"set LANG='%s'; echo '%s' | hunspell -d %s -s\"", $this->encoding, $input, $this->language));
+		} else {
+			return shell_exec(sprintf("export LANG='%s'; echo '%s' | hunspell -d %s -s", $this->encoding, $input, $this->language));
+		}
+		
     }
 
     /**
@@ -144,10 +156,13 @@ class Hunspell
      */
     protected function preParse($input, $words)
     {
-        $result = explode(PHP_EOL, trim($input));
-        unset($result[0]);
-        $words = array_map('trim', explode(" ", $words));
+        $result = explode("\n", trim($input));
+        array_shift($result);
+        $words = array_map('trim', preg_split('/\W/', $words));
 
+        if(sizeof($result) != sizeof($words)) {
+        	return [];
+		}
         return array_combine($words, $result);
     }
 
