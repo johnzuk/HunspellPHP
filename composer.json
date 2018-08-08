@@ -1,5 +1,5 @@
 {
-  "name": "belniakmedia/hunspell-php",
+  "name": "hunspell-php/hunspell-php",
   "description": "Hunspell PHP wrapper",
   "minimum-stability": "dev",
   "license": "MIT",
