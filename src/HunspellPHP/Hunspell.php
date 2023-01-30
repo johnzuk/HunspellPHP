@@ -1,4 +1,5 @@
-<?php
+<?php /** @noinspection PhpUnused */
+
 namespace HunspellPHP;
 
 use HunspellPHP\Exception\InvalidMatchTypeException;
@@ -80,14 +81,12 @@ class Hunspell
      */
     public function find($words)
     {
-        $matches = [];
-        $results = $this->preParse($this->findCommand($words), $words);
+        $results = $this->preParse((string)$this->findCommand($words), $words);
 
         $response = [];
         foreach ($results as $word => $result) {
             $matches = [];
-            $match = preg_match($this->matcher, $result, $matches);
-
+            preg_match($this->matcher, $result, $matches);
             $matches['input'] = $word;
             $response[] = $this->parse($matches);
         }
@@ -99,15 +98,13 @@ class Hunspell
      * @param string $word word to find
      * @return HunspellStemResponse
      * @throws InvalidMatchTypeException
-     * @throws InvalidResultException
      * @throws WordNotFoundException
      */
     public function stem($word)
     {
-        $result = explode(PHP_EOL, $this->stemCommand($word));
+        $result = explode(PHP_EOL, (string)$this->stemCommand($word));
         $result['input'] = $word;
-        $result = $this->stemParse($result);
-        return $result;
+        return $this->stemParse($result);
     }
 
     /**
@@ -120,7 +117,7 @@ class Hunspell
     }
 
     /**
-     * @return string
+     * @return null|string
      * @param string $input
      */
     protected function findCommand($input)
@@ -135,7 +132,7 @@ class Hunspell
     }
 
     /**
-     * @return string
+     * @return null|string
      * @param string $input
      */
     protected function stemCommand($input)
