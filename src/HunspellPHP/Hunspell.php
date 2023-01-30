@@ -85,7 +85,7 @@ class Hunspell
 
         $response = [];
         foreach ($results as $word => $result) {
-            $matches = [];
+            $matches = ['type' => null];
             preg_match($this->matcher, $result, $matches);
             $matches['input'] = $word;
             $response[] = $this->parse($matches);
