@@ -3,40 +3,21 @@ namespace HunspellPHP;
 
 class HunspellResponse
 {
-    /**
-     * @var string
-     */
-    public $root;
-
-    /**
-     * @var string
-     */
-    public $original;
-
-    /**
-     * @var int
-     */
-    public $offset;
-
-    /**
-     * @var array
-     */
-    public $misses = [];
-
-    /**
-     * @var string
-     */
-    public $type;
+    public string $root;
+    public string $original;
+    public ?int $offset;
+    public array $misses = [];
+    public string $type;
 
     /**
      * HunspellResponse constructor.
      * @param string $root
      * @param string $original
-     * @param int $offset
+     * @param ?int $offset
      * @param array $misses
      * @param string $type
      */
-    public function __construct($root, $original, $type = '', $offset = null, array $misses = [])
+    public function __construct(string $root, string $original, string $type = '', ?int $offset = null, array $misses = [])
     {
         $this->root = $root;
         $this->original = $original;

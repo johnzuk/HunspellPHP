@@ -3,22 +3,16 @@ namespace HunspellPHP;
 
 class HunspellStemResponse
 {
-    /**
-     * @var string
-     */
-    public $original;
-
-    /**
-     * @var string[]
-     */
-    public $stems;
+    public string $original;
+    /** @var string[] */
+    public array $stems;
 
     /**
      * HunspellStemResponse constructor.
      * @param string $original
      * @param string[] $stems
      */
-    public function __construct($original, $stems = [])
+    public function __construct(string $original, array $stems = [])
     {
         $this->original = $original;
         $this->stems = $stems;
