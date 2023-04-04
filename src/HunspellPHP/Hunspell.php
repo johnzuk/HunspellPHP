@@ -1,140 +1,153 @@
 <?php
+/** @noinspection PhpUnused */
 namespace HunspellPHP;
-
-use HunspellPHP\Exception\InvalidMatchTypeException;
-use HunspellPHP\Exception\InvalidResultException;
-use HunspellPHP\Exception\WordNotFoundException;
 
 class Hunspell
 {
     const OK = '*';
-
     const ROOT = '+';
-
     const MISS = '&';
-
     const NONE = '#';
-
     const COMPOUND = '-';
-
     const STATUSES_NAME = [
         Hunspell::OK => 'OK',
         Hunspell::ROOT => 'ROOT',
         Hunspell::MISS => 'MISS',
         Hunspell::NONE => 'NONE',
-        Hunspell::COMPOUND => 'COMPOUND',
+        Hunspell::COMPOUND => 'COMPOUND'
     ];
 
-    /**
-     * @var string
-     */
-    protected $language = "pl_PL";
+    protected string $encoding;
+    protected string $dictionary;
+    protected string $dictionary_path;
+    protected string $matcher =
+        '/(?P<type>\*|\+|&|#|-)\s?(?P<original>\w+)?\s?(?P<count>\d+)?\s?(?P<offset>\d+)?:?\s?(?P<misses>.*+)?/u';
 
     /**
-     * @var string
+     * @param string $dictionary Dictionary name e.g.: 'en_US' (default)
+     * @param string $encoding Encoding e.g.: 'utf-8' (default)
+     * @param ?string $dictionary_path Specify the directory of the dictionary file (optional)
      */
-    protected $encoding = "pl_PL.utf-8";
+    public function __construct(
+        string $dictionary = 'en_US',
+        string $encoding = 'en_US.utf-8',
+        ?string $dictionary_path = null
+    ) {
+        $this->dictionary = $this->clear($dictionary);
+        $this->encoding = $this->clear($encoding);
+        $this->dictionary_path = $dictionary_path;
+    }
 
-    /**
-     * @var string
-     */
-    protected $matcher =
-        "/(?P<type>\*|\+|&|#)\s?(?P<original>\w+)?\s?(?P<count>\d+)?\s?(?P<offset>\d+)?:?\s?(?P<misses>.*+)?/u";
 
     /**
      * @return string
      */
-    public function getLanguage()
-    {
-        return $this->language;
-    }
-
-    /**
-     * @param string $language
-     */
-    public function setLanguage($language)
-    {
-        $this->language = $this->clear($language);
-    }
-
-    /**
-     * @return string
-     */
-    public function getEncoding()
+    public function getEncoding(): string
     {
         return $this->encoding;
     }
 
     /**
-     * @param string $encoding
+     * @return string
      */
-    public function setEncoding($encoding)
+    public function getDictionary(): string
+    {
+        return $this->dictionary;
+    }
+
+    /**
+     * @return string
+     */
+    public function getDictionaryPath(): string
+    {
+        return $this->dictionary_path;
+    }
+
+    /**
+     * @param string $dictionary Language code e.g.: 'en_US'
+     */
+    public function setDictionary(string $dictionary): void
+    {
+        $this->dictionary = $this->clear($dictionary);
+    }
+
+    /**
+     * @param string $dictionary_path The path to load the dictionary files from
+     */
+    public function setDictionaryPath(string $dictionary_path): void
+    {
+        $this->dictionary_path = $dictionary_path;
+    }
+
+
+    /**
+     * @param string $encoding Encoding value (includes language code) e.g.: 'en_US.utf-8'
+     */
+    public function setEncoding(string $encoding): void
     {
         $this->encoding = $this->clear($encoding);
     }
 
     /**
-     * @param $words
+     * @param string $words
      * @return array
      * @throws InvalidMatchTypeException
      */
-    public function find($words)
+    public function find(string $words): array
     {
-        $matches = [];
         $results = $this->preParse($this->findCommand($words), $words);
 
         $response = [];
         foreach ($results as $word => $result) {
-            $matches = [];
-            $match = preg_match($this->matcher, $result, $matches);
-
+            $matches = ['type' => null];
+            preg_match($this->matcher, $result, $matches);
             $matches['input'] = $word;
+            $matches['type'] = $matches['type'] ?? null;
+            $matches['original'] = $matches['original'] ?? '';
+            $matches['misses'] = $matches['misses'] ?? [];
+            $matches['offset'] = $matches['offset'] ?? null;
+            $matches['count'] = $matches['count'] ?? null;
             $response[] = $this->parse($matches);
         }
-
         return $response;
     }
 
     /**
      * @param string $word word to find
      * @return HunspellStemResponse
-     * @throws InvalidMatchTypeException
-     * @throws InvalidResultException
-     * @throws WordNotFoundException
      */
-    public function stem($word)
+    public function stem(string $word): HunspellStemResponse
     {
-        $result = explode(PHP_EOL, $this->stemCommand($word));
+        $result = explode(PHP_EOL, $this->findCommand($word, true));
         $result['input'] = $word;
-        $result = $this->stemParse($result);
-        return $result;
+        return $this->stemParse($result);
     }
 
     /**
      * @param string $input
-     * @return mixed
-     */
-    protected function clear($input)
-    {
-        return preg_replace('[^a-zA-Z0-9_\-.]', '', $input);
-    }
-
-    /**
      * @return string
-     * @param string $input
      */
-    protected function findCommand($input)
+    protected function clear(string $input): string
     {
-        return shell_exec(sprintf("LANG=%s; echo '%s' | hunspell -d %s", $this->encoding, $input, $this->language));
+        return (string)preg_replace('[^a-zA-Z0-9_-\.]', '', $input);
     }
 
     /**
-     * @return string
      * @param string $input
+     * @param bool $stem_mode
+     * @return string
      */
-    protected function stemCommand($input)
+    protected function findCommand(string $input, bool $stem_mode = false): string
     {
-        return shell_exec(sprintf("LANG=%s; echo '%s' | hunspell -d %s -s", $this->encoding, $input, $this->language));
+        $stem_switch = $stem_mode ? ' -s' : '';
+        $dictionary = $this->dictionary_path
+            ? rtrim($this->dictionary_path, DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR . $this->dictionary
+            : $this->dictionary;
+		if (strtoupper(substr(PHP_OS, 0, 3)) === 'WIN') {
+			return (string)shell_exec(sprintf("powershell \"set LANG='%s'; echo '%s' | hunspell -d %s%s\"", $this->encoding, $input, $dictionary, $stem_switch));
+		} else {
+			return (string)shell_exec(sprintf("export LANG='%s'; echo '%s' | hunspell -d %s%s", $this->encoding, $input, $dictionary, $stem_switch));
+		}
     }
 
     /**
@@ -142,12 +155,15 @@ class Hunspell
      * @param string $words
      * @return array
      */
-    protected function preParse($input, $words)
+    protected function preParse(string $input, string $words): array
     {
-        $result = explode(PHP_EOL, trim($input));
-        unset($result[0]);
-        $words = array_map('trim', explode(" ", $words));
+        $result = explode("\n", trim($input));
+        array_shift($result);
+        $words = array_map('trim', preg_split('/\W/', $words));
 
+        if(sizeof($result) != sizeof($words)) {
+        	return [];
+		}
         return array_combine($words, $result);
     }
 
@@ -156,7 +172,7 @@ class Hunspell
      * @return HunspellResponse
      * @throws InvalidMatchTypeException
      */
-    protected function parse(array $matches)
+    protected function parse(array $matches): HunspellResponse
     {
         if ($matches['type'] == Hunspell::OK || $matches['type'] == Hunspell::COMPOUND) {
             return new HunspellResponse(
@@ -193,10 +209,8 @@ class Hunspell
     /**
      * @param array $matches
      * @return HunspellStemResponse
-     * @throws InvalidMatchTypeException
-     * @throws WordNotFoundException
      */
-    protected function stemParse(array $matches)
+    protected function stemParse(array $matches): HunspellStemResponse
     {
         $input = $matches['input'];
         unset($matches['input']);

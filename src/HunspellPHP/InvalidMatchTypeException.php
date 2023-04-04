@@ -1,5 +1,5 @@
 <?php
-namespace HunspellPHP\Exception;
+namespace HunspellPHP;
 
 class InvalidMatchTypeException extends \Exception
 {
